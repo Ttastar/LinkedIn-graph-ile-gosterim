@@ -39,3 +39,18 @@ for connection in connections:
             links.append({"source": firstPublicId,
                         "target": secondPublicId})
 
+nodes = []
+numberOfProfiles = len(publicIds)
+index = 0
+
+for publicId in publicIds:
+    index += 1
+    nodes.append({"publicId": publicId})
+
+with open('linkedNodes.json', 'w', encoding='utf-8') as f:
+    json.dump({
+        "nodes": nodes,
+        "links": links
+    }, f, indent=4)
+
+

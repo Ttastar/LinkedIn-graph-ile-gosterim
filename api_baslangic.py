@@ -1,1 +1,0 @@
-print('API için başlangıç')
