@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .links line {
+        stroke: #999;
+        stroke-opacity: 0.1;
+    }
+
+    .nodes circle {
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+    
+    text {
+        font-family: sans-serif;
+        font-size: 12px;
+    }
+</style>
+<svg height="0"></svg>
+<p><h1>Linkedin bağlantınızı graph haline getirin</h1></p>
+<p><a href="https://www.linkedin.com/help/linkedin/answer/66844/export-connections-from-linkedin" target="_blank">
+    Export your Connections from LinkedIn</a></p>
+<p>Then import the csv file here: *</p>
+<input id="csv" type="file">
+<p>* you may need to remove the LinkedIn's notes from the csv file </p>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js"></script>
+<script>
+    const LINKED_IN_CSV_HEADER = 'First Name,Last Name,Email Address,Company';
+    const MINIMUM_COMPANY_SIZE = 3;
+    const fileInput = document.getElementById("csv");
+    const nodes = [];
+    const links = [];
+
+    readFile = function () {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const text = e.target.result;
+            const result = text.substring(text.search(LINKED_IN_CSV_HEADER));
+            const connections = $.csv.toObjects(result);
+
+            nodes.push({
+                "firstName": "You",
+                "lastName": "",
+                "name": "You",
+                "company": ""
+            });
+
+            const companyCountMap = new Map([]);
+            for (source of connections) {
+                const company = source["Company"];
+                if (companyCountMap.has(company)) {
+                    companyCountMap.set(
+                        company,
+                        companyCountMap.get(company) + 1
+                    )
+                } else {
+                    companyCountMap.set(company, 1);
+                }
+            }
+
+            for (source of connections) {
+                const sourceFirstName = convertTurkishCharacters(source["First Name"]);
+                const sourceLastName = convertTurkishCharacters(source["Last Name"]);
+                const sourceName = sourceFirstName + " " + sourceLastName;
+                const sourceCompany = source["Company"];
+
+                if (companyCountMap.get(sourceCompany) >= MINIMUM_COMPANY_SIZE) {
+                    links.push({
+                        "source": "You",
+                        "target": sourceName
+                    });
+
+                    nodes.push({
+                        "firstName": sourceFirstName,
+                        "lastName": sourceLastName,
+                        "name": sourceName,
+                        "company": sourceCompany
+                    });
+
+                    for (target of connections) {
+                        const targetFirstName = convertTurkishCharacters(target["First Name"]);
+                        const targetLastName = convertTurkishCharacters(target["Last Name"]);
+                        const targetName = targetFirstName + " " + targetLastName;
+                        if (sourceName != targetName && sourceCompany == target["Company"]) {
+                            links.push({
+                                "source": sourceName,
+                                "target": targetName
+                            });
+                        }
+                    }
+                }
+            }
+
+            graph = {
+                "nodes": nodes,
+                "links": links
+            }
+
+            render(graph);
+
+        };
+        reader.readAsText(fileInput.files[0], 'UTF-8');
+    };
+
+    fileInput.addEventListener('change', readFile);
+
+    var simulation;
+
+    /*
+     * Modified from D3.js v4 Force Directed Graph with Labels
+     * https://bl.ocks.org/heybignick/3faf257bbbbc7743bb72310d03b86ee8
+    */
+    function render(graph) {
+        const width = $(window).width();
+        const height = $(window).height();
+
+        const svg = d3.select("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .call(d3.zoom().on("zoom", zoomed));
+
+        const container = svg.append("g");
+
+        const color = d3.scaleOrdinal(d3.schemeCategory20);
+
+        simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(function (d) { return d.name; }))
+            .force("charge", d3.forceManyBody().strength(-1500).distanceMax(1 * Math.min(width, height)))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        const link = container.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graph.links)
+            .enter().append("line")
+            .attr("stroke-width", function (d) { return color(d.company); });
+
+        const node = container.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(graph.nodes)
+            .enter().append("g");
+
+        const circles = node.append("circle")
+            .attr("r", 5)
+            .attr("fill", function(d) { return color(d.company); })
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        const labels = node.append("text")
+            .text(function (d) {
+                return d.name;
+            })
+            .attr('x', 6)
+            .attr('y', 3);
+
+        node.append("title")
+            .text(function (d) { return d.company; });
+
+        simulation
+            .nodes(graph.nodes)
+            .on("tick", ticked);
+
+        simulation.force("link")
+            .links(graph.links);
+
+        
+    }
+
+    function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+</script>
