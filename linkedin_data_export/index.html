@@ -144,6 +144,7 @@
             .data(graph.nodes)
             .enter().append("g");
 
+        //company ozellestirilmesi
         const circles = node.append("circle")
             .attr("r", 5)
             .attr("fill", function(d) { return color(d.company); })
