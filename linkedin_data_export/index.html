@@ -34,6 +34,13 @@
     const nodes = [];
     const links = [];
 
+    function convertTurkishCharacters(text) {
+        const turkishChars = {
+            'Ç': 'C', 'Ö': 'O', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'İ': 'I', 'ı': 'i', 'ç': 'c', 'ö': 'o', 'ş': 's', 'ğ': 'g', 'ü': 'u'
+        };
+        return text.split('').map(char => turkishChars[char] || char).join('');
+    }
+
     readFile = function () {
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -144,7 +151,6 @@
             .data(graph.nodes)
             .enter().append("g");
 
-        //company ozellestirilmesi
         const circles = node.append("circle")
             .attr("r", 5)
             .attr("fill", function(d) { return color(d.company); })
@@ -170,7 +176,45 @@
         simulation.force("link")
             .links(graph.links);
 
+        function ticked() {
+            link
+                .attr("x1", function (d) { return d.source.x; })
+                .attr("y1", function (d) { return d.source.y; })
+                .attr("x2", function (d) { return d.target.x; })
+                .attr("y2", function (d) { return d.target.y; });
+
+            node
+                .attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                });
+        }
+
+        function zoomed() {
+            container.attr("transform", d3.event.transform);
+        }
+
+        // Add legend
+        const legendContainer = svg.append("g")
+            .attr("class", "legend")
+            .attr("transform", "translate(10, 10)");
+
+        const companies = [...new Set(graph.nodes.map(d => d.company))].filter(d => d !== "");
         
+        const legend = legendContainer.selectAll("g")
+            .data(companies)
+            .enter().append("g")
+            .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("circle")
+            .attr("r", 5)
+            .attr("cx", 10)
+            .attr("cy", 10)
+            .attr("fill", function(d) { return color(d); });
+
+        legend.append("text")
+            .attr("x", 20)
+            .attr("y", 15)
+            .text(function(d) { return d; });
     }
 
     function dragstarted(d) {
