@@ -53,4 +53,3 @@ with open('linkedNodes.json', 'w', encoding='utf-8') as f:
         "links": links
     }, f, indent=4)
 
-
