@@ -28,11 +28,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js"></script>
 <script>
-    const LINKED_IN_CSV_HEADER = 'First Name,Last Name,Email Address,Company';
+    const LINKED_IN_CSV_HEADER = 'First Name,Last Name,URL,Email Address,Company,Position,Connected On';
     const MINIMUM_COMPANY_SIZE = 3;
     const fileInput = document.getElementById("csv");
     const nodes = [];
     const links = [];
+    const companyCountMap = new Map();
 
     function convertTurkishCharacters(text) {
         const turkishChars = {
@@ -52,10 +53,10 @@
                 "firstName": "You",
                 "lastName": "",
                 "name": "You",
-                "company": ""
+                "company": "",
+                "url": ""
             });
 
-            const companyCountMap = new Map([]);
             for (source of connections) {
                 const company = source["Company"];
                 if (companyCountMap.has(company)) {
@@ -73,6 +74,7 @@
                 const sourceLastName = convertTurkishCharacters(source["Last Name"]);
                 const sourceName = sourceFirstName + " " + sourceLastName;
                 const sourceCompany = source["Company"];
+                const sourceUrl = source["URL"];
 
                 if (companyCountMap.get(sourceCompany) >= MINIMUM_COMPANY_SIZE) {
                     links.push({
@@ -84,7 +86,8 @@
                         "firstName": sourceFirstName,
                         "lastName": sourceLastName,
                         "name": sourceName,
-                        "company": sourceCompany
+                        "company": sourceCompany,
+                        "url": sourceUrl
                     });
 
                     for (target of connections) {
@@ -149,7 +152,10 @@
             .attr("class", "nodes")
             .selectAll("g")
             .data(graph.nodes)
-            .enter().append("g");
+            .enter().append("g")
+            .on("click", function(d) {
+                window.open(d.url, "_blank");
+            });
 
         const circles = node.append("circle")
             .attr("r", 5)
@@ -214,7 +220,7 @@
         legend.append("text")
             .attr("x", 20)
             .attr("y", 15)
-            .text(function(d) { return d; });
+            .text(function(d) { return d + " (" + companyCountMap.get(d) + ")"; });
     }
 
     function dragstarted(d) {
