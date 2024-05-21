@@ -3,26 +3,80 @@
 <style>
     .links line {
         stroke: #999;
-        stroke-opacity: 0.1;
+        stroke-opacity: 0.4;
     }
 
     .nodes circle {
         stroke: #fff;
-        stroke-width: 1.5px;
+        stroke-width: 2.0px;
     }
     
     text {
         font-family: sans-serif;
         font-size: 12px;
     }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px;
+        background-color: #fefefe;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 15px;
+    }
+
+    .modal-header img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .close {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+    }
+
+    .modal-content p {
+        margin: 5px 0;
+    }
 </style>
 <svg height="0"></svg>
 <p><h1>Linkedin bağlantınızı graph haline getirin</h1></p>
 <p><a href="https://www.linkedin.com/help/linkedin/answer/66844/export-connections-from-linkedin" target="_blank">
-    Export your Connections from LinkedIn</a></p>
-<p>Then import the csv file here: *</p>
+    Bağlantılarınızı LinkedIn'den aktarın</a></p>
+<p>Daha sonra csv dosyasını buraya aktarın: *</p>
 <input id="csv" type="file">
-<p>* you may need to remove the LinkedIn's notes from the csv file </p>
+<p>*** LinkedIn'in başlıklarını csv dosyasından kaldırmanız gerekebilir ***</p>
+
+<!-- Modal -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn Logo">
+            <span class="close">&times;</span>
+        </div>
+        <p id="modalText"></p>
+    </div>
+</div>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -34,12 +88,20 @@
     const nodes = [];
     const links = [];
     const companyCountMap = new Map();
+    let timer;
 
     function convertTurkishCharacters(text) {
         const turkishChars = {
             'Ç': 'C', 'Ö': 'O', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'İ': 'I', 'ı': 'i', 'ç': 'c', 'ö': 'o', 'ş': 's', 'ğ': 'g', 'ü': 'u'
         };
-        return text.split('').map(char => turkishChars[char] || char).join('');
+        if(text != null){
+            return text.split('').map(char => turkishChars[char] || char).join('');
+        }
+        else{
+            return null;
+            debugger;
+        }
+       
     }
 
     readFile = function () {
@@ -54,11 +116,14 @@
                 "lastName": "",
                 "name": "You",
                 "company": "",
-                "url": ""
+                "url": "",
+                "email": "",
+                "position": "",
+                "connectedOn": ""
             });
 
             for (source of connections) {
-                const company = source["Company"];
+                const company = source["Company"] || "Bir Şirkette Bulunmayan";
                 if (companyCountMap.has(company)) {
                     companyCountMap.set(
                         company,
@@ -73,8 +138,11 @@
                 const sourceFirstName = convertTurkishCharacters(source["First Name"]);
                 const sourceLastName = convertTurkishCharacters(source["Last Name"]);
                 const sourceName = sourceFirstName + " " + sourceLastName;
-                const sourceCompany = source["Company"];
+                const sourceCompany = source["Company"] || "Bir Şirkette Bulunmayan";
                 const sourceUrl = source["URL"];
+                const sourceEmail = source["Email Address"];
+                const sourcePosition = source["Position"];
+                const sourceConnectedOn = source["Connected On"];
 
                 if (companyCountMap.get(sourceCompany) >= MINIMUM_COMPANY_SIZE) {
                     links.push({
@@ -87,7 +155,10 @@
                         "lastName": sourceLastName,
                         "name": sourceName,
                         "company": sourceCompany,
-                        "url": sourceUrl
+                        "url": sourceUrl,
+                        "email": sourceEmail,
+                        "position": sourcePosition,
+                        "connectedOn": sourceConnectedOn
                     });
 
                     for (target of connections) {
@@ -155,6 +226,14 @@
             .enter().append("g")
             .on("click", function(d) {
                 window.open(d.url, "_blank");
+            })
+            .on("mouseover", function(d) {
+                timer = setTimeout(function() {
+                    showModal(d);
+                }, 4000);
+            })
+            .on("mouseout", function(d) {
+                clearTimeout(timer);
             });
 
         const circles = node.append("circle")
@@ -199,13 +278,13 @@
             container.attr("transform", d3.event.transform);
         }
 
-        // Add legend
-        const legendContainer = svg.append("g")
+              
+            const legendContainer = svg.append("g")
             .attr("class", "legend")
             .attr("transform", "translate(10, 10)");
 
-        const companies = [...new Set(graph.nodes.map(d => d.company))].filter(d => d !== "");
-        
+        const companies = [...new Set(graph.nodes.map(d => d.company))];
+
         const legend = legendContainer.selectAll("g")
             .data(companies)
             .enter().append("g")
@@ -220,7 +299,7 @@
         legend.append("text")
             .attr("x", 20)
             .attr("y", 15)
-            .text(function(d) { return d + " (" + companyCountMap.get(d) + ")"; });
+            .text(function(d) { return d + " (" + (companyCountMap.get(d) || 0) + ")"; });
     }
 
     function dragstarted(d) {
@@ -240,4 +319,37 @@
         d.fy = null;
     }
 
+    function showModal(d) {
+        var modal = document.getElementById("myModal");
+        var modalText = document.getElementById("modalText");
+        modalText.innerHTML = `
+            <p><strong>First Name:</strong> ${d.firstName}</p>
+            <p><strong>Last Name:</strong> ${d.lastName}</p>
+            <p><strong>URL:</strong> <a href="${d.url}" target="_blank">${d.url}</a></p>
+            <p><strong>Email Address:</strong> ${d.email}</p>
+            <p><strong>Company:</strong> ${d.company}</p>
+            <p><strong>Position:</strong> ${d.position}</p>
+            <p><strong>Connected On:</strong> ${d.connectedOn}</p>
+        `;
+        modal.style.display = "block";
+    }
+
+    function hideModal() {
+        var modal = document.getElementById("myModal");
+        modal.style.display = "none";
+    }
+
+    var span = document.getElementsByClassName("close")[0];
+
+    span.onclick = function() {
+        hideModal();
+    }
+
+    window.onclick = function(event) {
+        var modal = document.getElementById("myModal");
+        if (event.target == modal) {
+            hideModal();
+        }
+    }
 </script>
+
