@@ -67,7 +67,7 @@
 <input id="csv" type="file">
 <p>*** LinkedIn'in başlıklarını csv dosyasından kaldırmanız gerekebilir ***</p>
 
-<!-- Modal -->,
+<!-- Modal -->
 <div id="myModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -323,13 +323,13 @@
         var modal = document.getElementById("myModal");
         var modalText = document.getElementById("modalText");
         modalText.innerHTML = `
-            <p><strong>Adı:</strong> ${d.firstName}</p>
-            <p><strong>Soyadı:</strong> ${d.lastName}</p>
-            <p><strong>LinkedIn Adresi:</strong> <a href="${d.url}" target="_blank">${d.url}</a></p>
-            <p><strong>Email Adresi:</strong> ${d.email}</p>
-            <p><strong>Şirketi:</strong> ${d.company}</p>
-            <p><strong>Çalıştığı Pozisyon:</strong> ${d.position}</p>
-            <p><strong>Bağlantı Tarihi:</strong> ${d.connectedOn}</p>
+            <p><strong>First Name:</strong> ${d.firstName}</p>
+            <p><strong>Last Name:</strong> ${d.lastName}</p>
+            <p><strong>URL:</strong> <a href="${d.url}" target="_blank">${d.url}</a></p>
+            <p><strong>Email Address:</strong> ${d.email}</p>
+            <p><strong>Company:</strong> ${d.company}</p>
+            <p><strong>Position:</strong> ${d.position}</p>
+            <p><strong>Connected On:</strong> ${d.connectedOn}</p>
         `;
         modal.style.display = "block";
     }
